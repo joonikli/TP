@@ -1,0 +1,37 @@
+from cmu_graphics import *
+from cmu_graphics import utils
+
+def onAppStart(app):
+    app.cx = 50
+    app.cy = 50
+    app.drawing = False
+    app.size = 10
+    app.opacity = 100
+    app.line = []
+
+def redrawAll(app):
+    drawLine(50, 50, 100, 100)
+    if app.drawing:
+        drawingLines(app)
+
+def drawingLines(app):
+    for i in range(1, len(app.line)):
+        drawLine(app.line[i-i][0], app.line[i-1][1], app.line[i][0], app.line[i][1])
+        drawCircle(app.cx, app.cy, app.size, fill='red', opacity=app.opacity)
+
+def onMousePress(app, mouseX, mouseY):
+    app.drawing = True
+    app.cx = mouseX
+    app.cy = mouseY
+
+def onMouseDrag(app, mouseX, mouseY):
+    app.drawing = True
+    app.cx = mouseX
+    app.cy = mouseY
+    print(mouseX, mouseY)
+    app.line.append((mouseX, mouseY))
+
+def onStep(app):
+    pass
+
+runApp(width=400, height=400)
