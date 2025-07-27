@@ -1,0 +1,44 @@
+from cmu_graphics import *
+
+class Layer:
+    def__init__(self, ):
+        self.rects = []
+        self.ovals = []
+        self.polygons = []
+        self.straightLines = []
+        self.pencilLines = []
+        self.brushLines = []
+        
+    def drawStraightLine(self, ):
+
+    def rect(self, tl, tr, w, h, fill):
+        self.rects.append()
+    
+    def oval(self, mx, my, w, h, fill):
+        self.ovals.append()
+
+    def straightline(self, ):
+        self.straightLines.append()
+
+    def pencilLines(self, ):
+        #makes one item, then adds it to self.pencilLines when done
+
+def onAppStart(app):
+    app.startLayer = Layer()
+    app.newPencilLine = [] # add this to pencilLines after
+
+def onMousePress(app):
+    # after clicking on a button 
+    # initialize that shape/line or layer
+    # if button is draw pencil line, call Layer.pencilLines
+
+def onMouseDrag(app):
+
+
+def onMouseRelease(app):
+    #add it to the list of items
+
+def redrawAll(app):
+    pass
+
+runApp()
