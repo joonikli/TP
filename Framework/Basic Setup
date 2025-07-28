@@ -1,5 +1,17 @@
 from cmu_graphics import *
+from Layer import *
 
+class Colors:
+    def __init__(self, app):
+        pass
+
+    def colorAdjust(self, app):
+        #all
+        #r
+        #b
+        #g
+        pass
+    
 class Frame:
     # draws buttons and basic setup of drawing app
     def __init__(self, app):
@@ -28,23 +40,14 @@ class Layer:
         self.ovals = []
         self.polygons = []
         self.straightLines = []
-        self.currPencilLine = []
-        self.pencilLines = [] # x, y, x1, y1, fill(changes), opacity(changes)
+        self.pencilLines = []
         self.brushLines = []
-        self.undos = []
         
-    def drawOld(self, allList, color):
-        for pointList in allList:
-            for i in range(1, len(pointList)):
-                drawLine(pointList[i-1][0], pointList[i-1][1], 
-                        pointList[i][0], pointList[i][1], fill=color)
+    def drawOld(self):
         pass 
         #draws everything so calls drawStraightLine(self), etc, etc
 
-    def drawPencilLine(self, pointList, color):
-        for i in range(1, len(pointList)):
-            drawLine(pointList[i-1][0], pointList[i-1][1], 
-                     pointList[i][0], pointList[i][1], fill=color)
+    def drawStraightLine(self):
         pass
 
     def rect(self, tl, tr, w, h, fill):
@@ -74,33 +77,25 @@ def onAppStart(app):
     app.startLayer = Layer()
     app.layers = [app.startLayer]
     app.newPencilLine = [] # add this to pencilLines after
-    app.currColor = None
 
-def onMousePress(app, mX, mY):
-    # after clicking on a btton 
+def onMousePress(app):
+    # after clicking on a button 
     # initialize that shape/line or layer
     # if button is draw pencil line, call Layer.pencilLines
-    # wahtever color is selected
-    app.currColor = 'black'
     pass
 
-def onMouseDrag(app, mX, mY):
-    app.newPencilLine.append((mX, mY))
+def onMouseDrag(app):
     pass
 
-def onMouseRelease(app, mX, mY):
+def onMouseRelease(app):
     #add it to the list of items
-    # if drawing pencil line is True: then 
-    app.startLayer.pencilLines.append(app.newPencilLine)
-    app.newPencilLine = []
     pass
 
 def redrawAll(app):
     app.blankSlate.draw(app)
-    app.startLayer.drawPencilLine(app.newPencilLine, app.currColor)
-    app.startLayer.drawOld(app.startLayer.pencilLines, app.currColor) #2d list of points
-    # for layer in app.layers:
+    for layer in app.layers:
         #draw layer
+        pass
     pass
 
 
