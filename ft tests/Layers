@@ -6,22 +6,28 @@ import random
 class Frame:
     # draws buttons and basic setup of drawing app
     def __init__(self, app):
-        pass
+        self.x = 0
+        self.y = 0
+        self.w = app.width
+        self.h = app.height
+        self.toolsW = self.w/5
+        self.toolsH = app.height
 
     def draw(self, app):
-        self.drawBg(app)
+        self.drawBg()
         self.drawButtons(app)
-        self.drawCanvas()
+        # self.drawCanvas()
     
-    def drawBg(self, app):
-        drawRect(0, 0, app.width, app.height, fill=rgb(99, 97, 97))
-        drawRect(0, 0, app.width/5, app.height, fill=rgb(99, 97, 97), border='black')
+    def drawBg(self):
+        drawRect(0, 0, self.w, self.h, fill=rgb(99, 97, 97)) #background
+        drawRect(0, 0, self.toolsW, self.h, 
+                 fill=None, border='black')
     
     def drawButtons(self, app):
         pass
     
-    def drawCanvas(self):
-        pass
+    # def drawCanvas(self):
+    #     pass
     
 
 class Layer:
@@ -35,7 +41,6 @@ class Layer:
         self.pencilLines = [] # x, y, x1, y1, fill(changes), opacity(changes)
         self.brushLines = []
         self.undos = []
-    
 
     def drawOld(self, app, allList, color):
         r = 1
@@ -51,7 +56,7 @@ class Layer:
         if app.brush:
             for i in range(1, len(pointList)):
                 drawLine(pointList[i-1][0], pointList[i-1][1], 
-                        pointList[i][0], pointList[i][1], lineWidth=8, 
+                        pointList[i][0], pointList[i][1], lineWidth=6, 
                         fill=color, opacity=60)
                 r = 1  #+ random.random()/15
                 # drawCircle(pointList[i-1][0], pointList[i-1][1], 
@@ -59,17 +64,20 @@ class Layer:
                 # drawCircle(pointList[i][0], pointList[i][1], 
                 #            10, fill=color, opacity=80)
                 drawLine(pointList[i-1][0]*r, pointList[i-1][1]*r, 
-                        pointList[i][0]*r, pointList[i][1]*r, lineWidth=14, 
+                        pointList[i][0]*r, pointList[i][1]*r, lineWidth=12, 
                         fill=color, opacity=50)
                 drawLine(pointList[i-1][0]*r, pointList[i-1][1]*r, 
-                        pointList[i][0]*r, pointList[i][1]*r, lineWidth=20, 
+                        pointList[i][0]*r, pointList[i][1]*r, lineWidth=18, 
                         fill=color, opacity=30)
                 
         elif app.pencil:
             for i in range(1, len(pointList)):
                 drawLine(pointList[i-1][0], pointList[i-1][1], 
                         pointList[i][0], pointList[i][1], fill=color)
-            
+                
+    def drawCanvas(self, x, y, w, h):  
+        print(x, y, w, h)       
+        drawRect(x, y, w, h, fill='white')
 
     def rect(self, tl, tr, w, h, fill):
         pass
@@ -94,9 +102,9 @@ class Layer:
         pass
 
 def onAppStart(app):
-    app.blankSlate = Frame(app)
+    app.slate = Frame(app) # screen and buttons
     app.startLayer = Layer()
-    app.layers = [app.startLayer]
+    app.layers = [app.startLayer] # store all layers
     app.newPencilLine = [] # add this to pencilLines after
     app.currColor = None
     app.brush = False
@@ -126,7 +134,13 @@ def onMouseRelease(app, mX, mY):
     pass
 
 def redrawAll(app):
-    app.blankSlate.draw(app)
+    app.slate.draw(app)
+
+    app.startLayer.drawCanvas(app.slate.toolsW+5, 
+                              0, 
+                              app.width-(app.slate.toolsW+5),
+                              app.height)
+    # print('cechk')
     app.startLayer.drawPencilLine(app, app.newPencilLine, app.currColor)
     app.startLayer.drawOld(app, app.startLayer.pencilLines, app.currColor) #2d list of points
     # for layer in app.layers:
