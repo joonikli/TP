@@ -1,5 +1,5 @@
 from cmu_graphics import *
-from Layer import *
+# from Layers import *
 
 class Colors:
     def __init__(self, app):
@@ -35,7 +35,6 @@ class Frame:
 
 class Layer:
     def __init__(self):
-
         self.rects = []
         self.ovals = []
         self.polygons = []

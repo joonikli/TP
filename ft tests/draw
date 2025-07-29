@@ -30,8 +30,6 @@ def redrawAll(app):
         app.pencilLine.drawPencilLine()
 
 def drawingLines(app):
-
-   
         # drawLine(app.line[i-1][0], app.line[i-1][1], app.line[i][0], app.line[i][1]) # i - i for horizontal flip
         drawCircle(app.cx, app.cy, app.size, fill='red', opacity=app.opacity)
 
