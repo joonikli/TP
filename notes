@@ -60,6 +60,16 @@ def onAppStart(app):
     
     print(app.r == app.r)
 
-runApp()
+# runApp()
+
+def runii(n):
+    print('ab')
+
+a = runii
+
+b = 5
+
+a(b)
+# runii(b)
 
     
