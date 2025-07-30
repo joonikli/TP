@@ -34,23 +34,34 @@ class Frame:
                  app.height, fill='black')
 
 class Button:
-    def __init__(self, x, y, size, color, border, tool):
+    def __init__(self, x, y, size, color, border):
         self.x = x
         self.y = y
         self.size = size
         self.color = color
         self.border = border
-        self.tool = tool # current tool
 
-    def drawButton(self):
-        # 8 buttons: 
+    def drawButton(self, app):
         drawRect(self.x, self.y, self.size, self.size, 
-                 fill=self.color, border=self.border)
+                fill=self.color, border=self.border)
+        self.drawIcon(app)
 
     def drawIcon(self, app):
         for image in app.pilImages2:
             # print('image in button class', image)
             drawImage(image, self.x, self.y, align='left-top')
+    
+    def drawLayerControl(self):
+        drawRect(self.x, self.y, self.size*2.5, self.size, 
+                 fill=self.color, border=self.border)
+
+    def drawLayerButton(self, layerCt, layerOpacity):
+        y = app.width - self.y*5
+        drawRect(self.x, y, self.size*2.5, self.size, 
+                 fill=self.color, border=self.border)
+        drawLabel(f'Layer {layerCt}', self.x+5, y, align='left-top')
+        drawLabel(f'Opacity {layerOpacity}%', 
+                  self.x+5, self.y+20, align='left-top')
 
     def isPressed(self, mX, mY):
         bRight = self.x + self.size
@@ -87,9 +98,12 @@ class Canvas:
                  opacity=self.opacity)
         
 class Layer(Canvas):
+    count = 0
     # puts all drawings into an instance of a layer, can stack layers 
     def __init__(self, x=0, y=0, w=0, h=0, dx=0, dy=0, dsize=1):
         super().__init__(x, y, w, h, dx, dy, dsize)
+        Layer.count += 1
+        self.count = Layer.count
         self.rectsList = []
         self.ovalsList = []
         self.straightLinesList = []
@@ -166,23 +180,36 @@ class Layer(Canvas):
     def redo(self, app):
         pass
 
-    def drawOld(self): 
-        # draws everything besides what ur currently drawing
+    def drawOld(self):
         for itemList, func in self.allItems:
             for item in itemList:
                 func(item)
-            # elif app.pastel:
+    
+    def drawLayerButtonMain(self, app):
+        self.drawLayerButton(Layer.count, self.opacity)
+
+        return (Layer.count, self.opacity)
+    app.layerControls.
+
+class globalLayer:
+    def __init__(self):
+        self.allLayers = []
+    
+    def addLayer(self, other):
+        self.allLayers.append(other)
+    
+    def deleteLayer(self):
+        self.allLayers.pop()
 
 def pan(app):
     print('move canvas left and right')
-
-def zoom(app):
-    print('zoom in and out')
                 
 def onAppStart(app):
+    app.stepsPerSecond = 10
     app.slate = Frame(app) # initial background screen 
     app.startLayer = Layer() 
-    app.layers = [app.startLayer] # store all layers
+    app.layers = globalLayer() # store all layers
+    app.layers.addLayer(app.startLayer) 
     app.new = [] # add this to layer.freeLinesList after
     startTools(app)
 
@@ -207,26 +234,32 @@ def startTools(app):
                  [app.oval, app.rect],
                  [app.straight, app.erase], 
                  [app.undo, app.redo], 
-                 [app.zoomIn, app.zoomOut]]
+                 [app.zoomIn, app.zoomOut]] # get rid of zoom
                 # write a note that says that panning uses arrow keys 
                 # also need a color selector
                 # new layer
     startLeftTools(app)
     startRightTools(app)
 
-def startLeftTools(app): # tools
+def startLeftTools(app): # regular drawing tools
     app.buttons = [] # buttons to press to switch tools above
     start = app.width/30
     for row in range(5): 
         for col in range(2):
-            tool = app.tools[row][col]
-            button = Button(60*col+start, 60*row+10, 50, 
-                            app.slate.color, app.slate.border, tool)
+            button = Button(60*col+start, 60*row+20, 50, 
+                            app.slate.color, app.slate.border)
             app.buttons.append([button, row, col])
     startIcons(app)
 
 def startRightTools(app): # layer tools
-    for row in 
+    app.layerButtons = [] # specific info abt that layer
+    app.layerControls = []
+    start = app.width * 4 / 5
+    width = 50
+    for i in range(2):
+        control = Button(20+start, 60*i+20, width, 
+                        app.slate.color, app.slate.border)
+        app.layerControls.append([control])
 
 def loadPilImage(path):
     return Image.open(path)
@@ -265,8 +298,18 @@ def onMousePress(app, mX, mY):
             else:
                 app.tools[row][col][0] = False
     elif mX >= app.width - app.width/5:
-        # other section - layer add, delete
-        pass
+        button = app.layerControls[0] 
+        currButton = button
+        if currButton.respondToPress(app, mX, mY):
+            if len(app.layers) > 1:
+                app.layers.addLayer(app.startLayer)
+            app.startLayer = Layer()
+
+        button = app.layerControls[1]
+        currButton = button
+        if currButton.respondToPress(app, mX, mY):
+             if len(app.layers) > 1:
+                app.layers.deleteLayer()
 
 def onMouseDrag(app, mX, mY):
     for tool in app.tools:
@@ -286,14 +329,15 @@ def redrawAll(app):
     startX = app.slate.canvasW
     endX = app.slate.w - startX*2
     #draw white background for first layer (default look)
-    app.startLayer.drawCanvas(app, startX, 0, endX, app.slate.h-10)
-    for layer in app.layers: #appp, draw current, color 
+    app.layers.allLayers[0].drawCanvas(app, startX, 0, endX, app.slate.h-10)
+    app.slate.drawToolBar(app)
+    for layer in app.layers.allLayers: #appp, draw current, color 
         if app.pencil[0]:
             layer.drawPencilLines(app.new) # most current line
         layer.drawOld() #2d list of points
-    app.slate.drawToolBar(app)
+        layer.drawLayerButton(app)
+        
     for button in app.buttons:
-        button[0].drawButton()
-        button[0].drawIcon(app)
-
+        button[0].drawButton(app)
+    
 runApp(width=800, height=600)
