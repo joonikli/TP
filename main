@@ -25,10 +25,13 @@ class Frame:
     
     def drawToolBar(self, app):
         # tool bar and tools
-        drawRect(0, 0, app.width/5, app.height, 
-                 fill=self.color, border='black')
-        drawRect(app.width-app.width/5, 0, self.w, app.height,
-                 fill=self.color, border='black')
+        drawRect(0, 0, app.width/5+10, app.height, 
+                 fill=self.color)
+        drawLine(app.width/5, 0, app.width/5, app.height, fill='black')
+        drawRect(app.width-app.width/5-10, 0, self.w, app.height,
+                 fill=self.color)
+        drawLine(app.width-app.width/5, 0, app.width-app.width/5, 
+                 app.height, fill='black')
 
 class Button:
     def __init__(self, x, y, size, color, border, tool):
@@ -46,6 +49,7 @@ class Button:
 
     def drawIcon(self, app):
         for image in app.pilImages2:
+            # print('image in button class', image)
             drawImage(image, self.x, self.y, align='left-top')
 
     def isPressed(self, mX, mY):
@@ -56,10 +60,11 @@ class Button:
             return True
         return False
     
-    def respondToPress(self, mX, mY, layer):
-        if self.isPressed(mX, mY): # ne
-            self.tool = True # calls function !
-
+    def respondToPress(self, app, mX, mY):
+        if self.isPressed(mX, mY): 
+            return True
+        return False
+    
 class Canvas:
     # what you draw on, a white canvas
     def __init__(self, x, y, w, h, dx=0, dy=0, dsize=1, opacity=1):
@@ -182,21 +187,21 @@ def onAppStart(app):
     startTools(app)
 
 def startTools(app):
-    app.oval = False
-    app.rect = False
-    app.pastel = False
-    app.pencil = True
-    app.straight = False
+    app.oval = [False]
+    app.rect = [False]
+    app.pastel = [False]
+    app.pencil = [True]
+    app.straight = [False]
     app.currColor = 'red'
-    app.erase = False
-    app.undo = False
-    app.redo = False
+    app.erase = [False]
+    app.undo = [False]
+    app.redo = [False]
     # for panning: dx, dy
     app.dx = 0
     app.dy = 0
     # for zooming: zoomIn, zoomOut, dsize
-    app.zoomIn = False
-    app.zoomOut = False
+    app.zoomIn = [False]
+    app.zoomOut = [False]
     app.dsize = 1
     app.tools = [[app.pastel, app.pencil],
                  [app.oval, app.rect],
@@ -206,6 +211,10 @@ def startTools(app):
                 # write a note that says that panning uses arrow keys 
                 # also need a color selector
                 # new layer
+    startLeftTools(app)
+    startRightTools(app)
+
+def startLeftTools(app): # tools
     app.buttons = [] # buttons to press to switch tools above
     start = app.width/30
     for row in range(5): 
@@ -213,17 +222,31 @@ def startTools(app):
             tool = app.tools[row][col]
             button = Button(60*col+start, 60*row+10, 50, 
                             app.slate.color, app.slate.border, tool)
-            app.buttons.append(button)
+            app.buttons.append([button, row, col])
     startIcons(app)
 
+def startRightTools(app): # layer tools
+    for row in 
+
+def loadPilImage(path):
+    return Image.open(path)
+
 def startIcons(app):
-    app.paths= ['', ] # 10 icon images
-    pilImages = [loadPilImage(path) for path in app.paths]
+    app.paths = ['images/pastel.jpg','images/pencil.jpg',
+                'images/oval.jpg', 'images/rectangle.jpg',
+                'images/line.jpg', 'images/eraser.jpg', 
+                'images/undo.jpg', 'images/redo.jpg', 
+                'images/zoomIn.jpg', 'images/zoomOut.jpg' ] # 10 icon images
+    app.pilImages = []
+    for path in app.paths:
+        a = copy.deepcopy(loadPilImage(path))
+        app.pilImages.append(a)
     app.pilImages2 = []
-    for image in pilImages:
-        imageWidth, imageHeight = image.size
-        pilImage2 = image.resize((imageWidth//10, imageHeight//10))
+    for imagei in app.pilImages:
+        imageWidth, imageHeight = imagei.size
+        pilImage2 = imagei.resize((imageWidth//6, imageHeight//6))
         app.pilImages2.append(pilImage2)
+    print('2', app.pilImages2)
     for i in range(len(app.pilImages2)):
         app.pilImages2[i] = CMUImage(app.pilImages2[i])
 
@@ -234,18 +257,27 @@ def onMousePress(app, mX, mY):
     # wahtever color is selected
     app.new.append([app.currColor])
     app.new.append([])
-    for i in range(len(app.buttons)):
-        currButton = app.buttons[i]
-        currButton.respondToPress(mX, mY, app.startLayer) # call function to activate it
-    
+    if mX <= app.width/5:
+        for [button, row, col] in app.buttons:
+            currButton = button
+            if currButton.respondToPress(app, mX, mY): # call function to activate it
+                app.tools[row][col][0] = True
+            else:
+                app.tools[row][col][0] = False
+    elif mX >= app.width - app.width/5:
+        # other section - layer add, delete
+        pass
+
 def onMouseDrag(app, mX, mY):
-    if app.pencil:
-        app.new[1].append((mX, mY))
+    for tool in app.tools:
+        if app.pencil[0] or app.pastel[0]:
+            app.new[1].append((mX, mY))
     
 def onMouseRelease(app, mX, mY):
     #add it to the list of items
     #  #  designated color is now the last itemin list
-    app.startLayer.pencilLinesList.append(app.new)
+    if app.pencil[0]:
+        app.startLayer.pencilLinesList.append(app.new)
     app.new = []
 
 def redrawAll(app):
@@ -256,14 +288,12 @@ def redrawAll(app):
     #draw white background for first layer (default look)
     app.startLayer.drawCanvas(app, startX, 0, endX, app.slate.h-10)
     for layer in app.layers: #appp, draw current, color 
-        layer.drawPencilLines(app.new) # most current line
+        if app.pencil[0]:
+            layer.drawPencilLines(app.new) # most current line
         layer.drawOld() #2d list of points
     app.slate.drawToolBar(app)
     for button in app.buttons:
-        button.drawButton()
-        button.drawIcon()
-         
-
-# (app, pointList, color, opacity=100):
+        button[0].drawButton()
+        button[0].drawIcon(app)
 
 runApp(width=800, height=600)
