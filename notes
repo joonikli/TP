@@ -1,5 +1,11 @@
-
+from cmu_graphics import *
 # notes for myself/plans
+'''
+questions:
+    pil image- not drwing diff things w/loop
+
+'''
+
 
 '''Notes on what i want
 
@@ -48,4 +54,12 @@ class Colors:
         #b
         #g
         pass
+
+def onAppStart(app):
+    app.r = 5
+    
+    print(app.r == app.r)
+
+runApp()
+
     

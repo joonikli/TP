@@ -15,7 +15,7 @@ class Frame:
         self.toolsH = app.height
         self.canvasW = self.w/5 
         self.canvasH = self.toolsH 
-        self.color = rgb(99, 97, 97)
+        self.color = rgb(112, 112, 112) # hehe
         self.border = 'black'
     
     def drawBg(self, app):
@@ -34,30 +34,37 @@ class Frame:
                  app.height, fill='black')
 
 class Button:
-    def __init__(self, x, y, size, color, border):
+    def __init__(self, x, y, width, color, border, height=None,
+                 func=None, text=None):
         self.x = x
         self.y = y
-        self.size = size
+        self.size = width
         self.color = color
         self.border = border
+        self.ysize = height or self.size
+        self.text = text
+        self.func = func
 
-    def drawButton(self, app):
-        drawRect(self.x, self.y, self.size, self.size, 
+    def drawButton(self):
+        drawRect(self.x, self.y, self.size, self.ysize, 
                 fill=self.color, border=self.border)
-        self.drawIcon(app)
+        self.drawText()
+
+    def drawText(self):
+        drawLabel(self.text, self.x+self.size/2, self.y+self.ysize/2, 
+                  size=15, align='center')
 
     def drawIcon(self, app):
         for image in app.pilImages2:
-            # print('image in button class', image)
             drawImage(image, self.x, self.y, align='left-top')
     
     def drawLayerControl(self):
-        drawRect(self.x, self.y, self.size*2.5, self.size, 
+        drawRect(self.x, self.y, self.size, self.ysize, 
                  fill=self.color, border=self.border)
 
     def drawLayerButton(self, layerCt, layerOpacity):
         y = app.width - self.y*5
-        drawRect(self.x, y, self.size*2.5, self.size, 
+        drawRect(self.x, y, self.size*2, self.ysize, 
                  fill=self.color, border=self.border)
         drawLabel(f'Layer {layerCt}', self.x+5, y, align='left-top')
         drawLabel(f'Opacity {layerOpacity}%', 
@@ -65,7 +72,7 @@ class Button:
 
     def isPressed(self, mX, mY):
         bRight = self.x + self.size
-        bBottom = self.y + self.size
+        bBottom = self.y + self.ysize
         if (self.x <= mX <= bRight and 
             self.y <= mY <= bBottom):
             return True
@@ -75,6 +82,18 @@ class Button:
         if self.isPressed(mX, mY): 
             return True
         return False
+    
+    def func(self, app):
+        self.func()
+
+    def __eq__(self, other):
+        if isinstance(other, Button):
+            return (self.x == other.x and 
+            self.y == other.y 
+            and self.size == other.size)
+    
+    def __hash__(self):
+        return hash((self.x, self.y, self.size))
     
 class Canvas:
     # what you draw on, a white canvas
@@ -91,8 +110,6 @@ class Canvas:
         self.canvasTop = y + app.dy + 10
         self.canvasWidth = w*app.dsize - 20
         self.canvasHeight = h*app.dsize - 10
-        print('check inside func', self.canvasLeft, self.canvasTop, 
-              self.canvasWidth, self.canvasHeight)
         drawRect(self.canvasLeft, self.canvasTop, 
                  self.canvasWidth, self.canvasHeight, fill='white', 
                  opacity=self.opacity)
@@ -100,7 +117,7 @@ class Canvas:
 class Layer(Canvas):
     count = 0
     # puts all drawings into an instance of a layer, can stack layers 
-    def __init__(self, x=0, y=0, w=0, h=0, dx=0, dy=0, dsize=1):
+    def __init__(self, app, x=0, y=0, w=0, h=0, dx=0, dy=0, dsize=1):
         super().__init__(x, y, w, h, dx, dy, dsize)
         Layer.count += 1
         self.count = Layer.count
@@ -108,27 +125,51 @@ class Layer(Canvas):
         self.ovalsList = []
         self.straightLinesList = []
         self.opacity = 100
-        self.pencilLinesList = [] # x, y, x1, y1, fill(changes), opacity(changes)
+        self.pencilLinesList = [] # [[[color][points]]] format 
         self.pastelLinesList = []
         self.allItems = [
-             [self.rectsList, self.drawRects], 
-             [self.ovalsList, self.drawOvals],
-             [self.straightLinesList, self.drawStraightLines], 
-             [self.pencilLinesList, self.drawPencilLines],
-             [self.pastelLinesList, self.drawPastelLines]]
-        self.undos = []
-        self.redos = []
+             [app.rect, self.rectsList, self.drawRects], 
+             [app.oval, self.ovalsList, self.drawOvals],
+             [app.straight, self.straightLinesList, 
+                                self.drawStraightLines], 
+             [app.pencil, self.pencilLinesList, self.drawPencilLines],
+             [app.pastel, self.pastelLinesList, self.drawPastelLines]]
+        self.redo = []
+        self.lastMove = None
 
-    def drawRects(self, tl, tr, w, h, fill):
-        pass
-        self.rects.append()
+    def addOpacity(self):
+        self.opacity += 10
     
-    def drawOvals(self, mx, my, w, h, fill):
-        pass
-        self.ovals.append()
+    def deleteOpacity(self):
+        self.opacity -= 10
+
+    def getInfo(self, other): # gets the list the info needs to get added to
+        for toggle, lst, func in self.allItems:
+            if toggle == other:
+                return lst
+    
+    def func(self, other):
+        for toggle, lst, func in self.allItems:
+            if toggle == other:
+                return func
+
+    def getLayerCtOp(self): # for labelling info about that layer
+        return (Layer.count, self.opacity)
+
+    def drawRects(self, ptList):
+        color = ptList[0]
+        tl, tr, bl, br = ptList[1]
+        w, h = bl - tr, br - tr
+        drawRect(tl, tr, w, h, fill=color, opacity=self.opacity)
+    
+    def drawOvals(self, ptList):
+        color = ptList[0]
+        tl, tr, bl, br = ptList[1]
+        w, h = bl - tr, br - tr
+        drawOval(tl, tr, w, h, fill=color, opacity=self.opacity)
     
     def drawPastelLines(self, pointList, opacity=100):
-        o = opacity
+        o = self.opacity
         if len(pointList) < 1:
             return
         color = pointList[0][0]
@@ -137,15 +178,15 @@ class Layer(Canvas):
             drawLine(pts[i-1][0], pts[i-1][1], 
                     pts[i][0], pts[i][1], lineWidth=6, 
                     fill=color, opacity=o-40)
-            drawLine(pts[i-1][0]*r, pts[i-1][1]*r, 
-                    pts[i][0]*r, pts[i][1]*r, lineWidth=12, 
+            drawLine(pts[i-1][0], pts[i-1][1], 
+                    pts[i][0], pts[i][1], lineWidth=12, 
                     fill=color, opacity=o-50)
-            drawLine(pts[i-1][0]*r, pts[i-1][1]*r, 
-                    pts[i][0]*r, pts[i][1]*r, lineWidth=18, 
+            drawLine(pts[i-1][0], pts[i-1][1], 
+                    pts[i][0], pts[i][1], lineWidth=18, 
                     fill=color, opacity=o-70)
             
     def drawPencilLines(self, pointList, opacity=100):
-        o = opacity
+        o = self.opacity
         if len(pointList) < 1:
             return
         color = pointList[0][0]
@@ -155,7 +196,7 @@ class Layer(Canvas):
                     pts[i][0], pts[i][1], fill=color, opacity=o)   
 
     def drawStraightLines(self, pointList, opacity=100):
-        o = opacity
+        o = self.opacity
         if len(pointList) < 1:
             return
         color = pointList[0][0]
@@ -167,29 +208,32 @@ class Layer(Canvas):
         r = random.randrange(0, 256)
         g = random.randrange(0, 256)
         b = random.randrange(0, 256)
-        app.currColor = rgb(r, g, b)
-        pass 
+        app.currColor = rgb(r, g, b) 
 
-    def erase(self):
-        # circles
-        pass
+    def erase(self, pointList):
+        o = 100
+        if len(pointList) < 1:
+            return
+        color = 'white' # ignore current color
+        pts = pointList[1]
+        for i in range(1, len(pts)):
+            drawLine(pts[i-1][0], pts[i-1][1], 
+                    pts[i][0], pts[i][1], fill=color, opacity=o) 
 
-    def undo(self, app): # only works on current layer
-        pass
+    def undo(self, app): # only works on current layer, list of type
+        lst = getInfo(self, app.lastMove)
+        undid = lst.pop()
+        self.redo.append(undid)
 
     def redo(self, app):
-        pass
+        redid = self.redo.pop()
+        lst = getInfo(self, app.lastMove)
+        lst.append(redid) # assuming it's smthing like app.penciLinesList
 
     def drawOld(self):
-        for itemList, func in self.allItems:
+        for toggle, itemList, func in self.allItems: 
             for item in itemList:
                 func(item)
-    
-    def drawLayerButtonMain(self, app):
-        self.drawLayerButton(Layer.count, self.opacity)
-
-        return (Layer.count, self.opacity)
-    app.layerControls.
 
 class globalLayer:
     def __init__(self):
@@ -200,27 +244,26 @@ class globalLayer:
     
     def deleteLayer(self):
         self.allLayers.pop()
-
-def pan(app):
-    print('move canvas left and right')
                 
 def onAppStart(app):
     app.stepsPerSecond = 10
     app.slate = Frame(app) # initial background screen 
-    app.startLayer = Layer() 
+    startTools(app)
+    app.startLayer = Layer(app)
     app.layers = globalLayer() # store all layers
     app.layers.addLayer(app.startLayer) 
-    app.new = [] # add this to layer.freeLinesList after
-    startTools(app)
+    startLayerTools(app)
+    app.new = [] # add this to layer's lists after
 
 def startTools(app):
     app.oval = [False]
     app.rect = [False]
+    print('app.rect', app.rect)
     app.pastel = [False]
     app.pencil = [True]
     app.straight = [False]
     app.currColor = 'red'
-    app.erase = [False]
+    app.eraser = [False]
     app.undo = [False]
     app.redo = [False]
     # for panning: dx, dy
@@ -229,37 +272,53 @@ def startTools(app):
     # for zooming: zoomIn, zoomOut, dsize
     app.zoomIn = [False]
     app.zoomOut = [False]
+    app.currentMove = None
+    app.lastMove = None
     app.dsize = 1
     app.tools = [[app.pastel, app.pencil],
                  [app.oval, app.rect],
-                 [app.straight, app.erase], 
+                 [app.straight, app.eraser], 
                  [app.undo, app.redo], 
                  [app.zoomIn, app.zoomOut]] # get rid of zoom
                 # write a note that says that panning uses arrow keys 
                 # also need a color selector
                 # new layer
     startLeftTools(app)
-    startRightTools(app)
 
 def startLeftTools(app): # regular drawing tools
     app.buttons = [] # buttons to press to switch tools above
     start = app.width/30
     for row in range(5): 
         for col in range(2):
+            
             button = Button(60*col+start, 60*row+20, 50, 
                             app.slate.color, app.slate.border)
             app.buttons.append([button, row, col])
     startIcons(app)
 
-def startRightTools(app): # layer tools
-    app.layerButtons = [] # specific info abt that layer
+def startLayerTools(app): # layer tools
+    app.layerCtOp = [] # specific info abt that layer, count and opacity
     app.layerControls = []
     start = app.width * 4 / 5
-    width = 50
-    for i in range(2):
-        control = Button(20+start, 60*i+20, width, 
-                        app.slate.color, app.slate.border)
-        app.layerControls.append([control])
+    width = app.width / 12
+    height = 0.5 * width
+    controls = ['+ layer', '- layer', '+ opacity', '- opacity']
+    actions = [app.layers.addLayer, app.layers.deleteLayer,
+               app.startLayer.addOpacity, app.startLayer.deleteOpacity]
+    for i in range(len(controls)):
+        m = 0
+        if i % 2 == 0:
+            m = 1
+        x = width * m * (i % 2 + 1.1) + start + 10
+        y = 20 + (i // 2 * width)
+        control = Button(x, y, width,
+                        app.slate.color, app.slate.border, height,
+                        actions[i], controls[i])
+        # 0 and 1 iff
+        # 2 and 3 same x
+        app.layerControls.append(control) 
+    ct, opacity = 1, 100
+    app.layerCtOp.append([ct, opacity])
 
 def loadPilImage(path):
     return Image.open(path)
@@ -279,7 +338,6 @@ def startIcons(app):
         imageWidth, imageHeight = imagei.size
         pilImage2 = imagei.resize((imageWidth//6, imageHeight//6))
         app.pilImages2.append(pilImage2)
-    print('2', app.pilImages2)
     for i in range(len(app.pilImages2)):
         app.pilImages2[i] = CMUImage(app.pilImages2[i])
 
@@ -293,35 +351,69 @@ def onMousePress(app, mX, mY):
     if mX <= app.width/5:
         for [button, row, col] in app.buttons:
             currButton = button
-            if currButton.respondToPress(app, mX, mY): # call function to activate it
+            if currButton.respondToPress(app, mX, mY): # call tools to activate 
                 app.tools[row][col][0] = True
+                app.currentMove = app.tools[row][col]
+                if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
+                                            app.oval, app.rect, app.straight]:
+                    app.new[1].append((mX, mY))
+                elif app.tools[row][col] in [app.redo, app.undo]:
+                    app.startLayer.redo(app)
+                    app.startLayer.undo(app)
             else:
                 app.tools[row][col][0] = False
     elif mX >= app.width - app.width/5:
         button = app.layerControls[0] 
         currButton = button
-        if currButton.respondToPress(app, mX, mY):
-            if len(app.layers) > 1:
-                app.layers.addLayer(app.startLayer)
-            app.startLayer = Layer()
-
+        if currButton.respondToPress(app, mX, mY): # add layer pressed
+            app.layers.addLayer(app.startLayer)
+            app.startLayer = Layer(app)
         button = app.layerControls[1]
         currButton = button
-        if currButton.respondToPress(app, mX, mY):
-             if len(app.layers) > 1:
+        if currButton.respondToPress(app, mX, mY): # delete layer pressed
+             if len(app.layers.allLayers) > 1:
                 app.layers.deleteLayer()
+        button = app.layerControls[2]
+        currButton = button
+        if currButton.respondToPress(app, mX, mY):
+            app.startLayer.opacity = button.opacity 
 
 def onMouseDrag(app, mX, mY):
-    for tool in app.tools:
-        if app.pencil[0] or app.pastel[0]:
-            app.new[1].append((mX, mY))
-    
+    rows = len(app.tools)
+    cols = len(app.tools[0])
+    for row in range(rows):
+        for col in range(cols):
+            tool = app.tools[row][col]
+            if tool[0] == True:
+                if tool in [app.pencil, app.pastel, app.eraser]:
+                    app.new[1].append((mX, mY))
+        
 def onMouseRelease(app, mX, mY):
     #add it to the list of items
     #  #  designated color is now the last itemin list
-    if app.pencil[0]:
-        app.startLayer.pencilLinesList.append(app.new)
-    app.new = []
+    rows = len(app.tools)
+    cols = len(app.tools[0])
+    for row in range(rows):
+        for col in range(cols):
+            tool = app.tools[row][col]
+            if tool[0] == True:
+                if tool in [app.oval, app.rect, app.straight]:
+                    app.new[1].append((mX, mY))
+                lstToAdd = app.startLayer.getInfo(tool)
+                lstToAdd.append(app.new)
+                app.new = []
+                app.lastMove = app.currentMove 
+
+def onKeyPress(app, key):
+    if key == 'left':
+        app.dx += 5
+    elif key == 'right':
+        app.dx -= 5
+    elif key == 'up':
+        app.dy += 5
+    elif key == 'down':
+        app.dy -= 5
+    print('pan key')
 
 def redrawAll(app):
     #resizes app bar
@@ -331,13 +423,33 @@ def redrawAll(app):
     #draw white background for first layer (default look)
     app.layers.allLayers[0].drawCanvas(app, startX, 0, endX, app.slate.h-10)
     app.slate.drawToolBar(app)
-    for layer in app.layers.allLayers: #appp, draw current, color 
-        if app.pencil[0]:
-            layer.drawPencilLines(app.new) # most current line
+    drawLayerAllInfo(app)
+    for button in app.buttons: # regular tool buttons
+        button[0].drawButton()
+        button[0].drawIcon(app)
+
+def drawLayerAllInfo(app):
+    for i in range(len(app.layerControls)): # layer add/del buttons
+        button = app.layerControls[i]
+        button.drawButton()
+        button.drawText()
+                    
+    for i in range(len(app.layerCtOp)):
+        ct = app.layerCtOp[i][0]
+        opacity = app.layerCtOp[i][1]
+        start = app.width*4.5/5
+        top = app.width* 4 / 5
+        w, h = 40, 20
+        drawRect(start-app.width/5, top, w, h, 
+                 fill=app.slate.color, border='black')
+        drawLabel(f'layer {ct}', start, top+w/3, size=10)
+        drawLabel(f'opacity {opacity}%', start, top+w/2, size=10)
+
+    for layer in app.layers.allLayers: #app, draw current, color 
+        for [toggle, lst, func] in layer.allItems:
+            if toggle:
+                print('toggle test', toggle)
+                layer.func(app.new) # most current line
         layer.drawOld() #2d list of points
-        layer.drawLayerButton(app)
-        
-    for button in app.buttons:
-        button[0].drawButton(app)
     
 runApp(width=800, height=600)
