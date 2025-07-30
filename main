@@ -97,12 +97,12 @@ class Button:
     
 class Canvas:
     # what you draw on, a white canvas
-    def __init__(self, x, y, w, h, dx=0, dy=0, dsize=1, opacity=1):
+    def __init__(self, x, y, w, h, dx=0, dy=0, dsize=1, opacity=100):
         self.canvasLeft = x
         self.canvasTop = y
         self.canvasWidth = w
         self.canvasHeight = h
-        self.opacity = 100
+        self.opacity = opacity
         # self.opacity = 0  #test
 
     def drawCanvas(self, app, x, y, w, h, dx=0, dy=0, dsize=1):  
@@ -157,15 +157,22 @@ class Layer(Canvas):
         return (Layer.count, self.opacity)
 
     def drawRects(self, ptList):
+        if len(ptList[1]) < 3:
+            return
         color = ptList[0]
-        tl, tr, bl, br = ptList[1]
-        w, h = bl - tr, br - tr
+        print('point list', ptList[1])
+        (tl, tr), (bl, br) = ptList[1]
+        w, h = abs(bl - tr), abs(br - tr)
         drawRect(tl, tr, w, h, fill=color, opacity=self.opacity)
+        print('try find rect location', tl, tr, w, h, color)
     
     def drawOvals(self, ptList):
+        if len(ptList[1]) < 3:
+            return
         color = ptList[0]
-        tl, tr, bl, br = ptList[1]
-        w, h = bl - tr, br - tr
+        print('pts of Ovals', ptList)
+        (tl, tr), (bl, br) = ptList[1]
+        w, h = abs(bl - tr), abs(br - tr)
         drawOval(tl, tr, w, h, fill=color, opacity=self.opacity)
     
     def drawPastelLines(self, pointList, opacity=100):
@@ -243,7 +250,7 @@ class globalLayer:
         self.allLayers.append(other)
     
     def deleteLayer(self):
-        self.allLayers.pop()
+        delLayer = self.allLayers.pop()
                 
 def onAppStart(app):
     app.stepsPerSecond = 10
@@ -290,7 +297,6 @@ def startLeftTools(app): # regular drawing tools
     start = app.width/30
     for row in range(5): 
         for col in range(2):
-            
             button = Button(60*col+start, 60*row+20, 50, 
                             app.slate.color, app.slate.border)
             app.buttons.append([button, row, col])
@@ -352,14 +358,12 @@ def onMousePress(app, mX, mY):
         for [button, row, col] in app.buttons:
             currButton = button
             if currButton.respondToPress(app, mX, mY): # call tools to activate 
-                app.tools[row][col][0] = True
-                app.currentMove = app.tools[row][col]
-                if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
-                                            app.oval, app.rect, app.straight]:
-                    app.new[1].append((mX, mY))
-                elif app.tools[row][col] in [app.redo, app.undo]:
-                    app.startLayer.redo(app)
-                    app.startLayer.undo(app)
+                tool = app.tools[row][col]
+                print('test app.tols[row][col]', app.tools[row][col])
+                tool[0] = True
+                print(app.tools)
+                app.currentMove = tool
+                print('currently doing what', app.currentMove)
             else:
                 app.tools[row][col][0] = False
     elif mX >= app.width - app.width/5:
@@ -377,6 +381,15 @@ def onMousePress(app, mX, mY):
         currButton = button
         if currButton.respondToPress(app, mX, mY):
             app.startLayer.opacity = button.opacity 
+    else:
+        if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
+                                    app.oval, app.rect, app.straight]:
+                   
+                  pp.new[1].append((mX, mY))
+                    print('start append?', app.new[1])
+                elif app.tools[row][col] in [app.redo, app.undo]:
+                    app.startLayer.redo(app)
+                    app.startLayer.undo(app)
 
 def onMouseDrag(app, mX, mY):
     rows = len(app.tools)
