@@ -1,6 +1,7 @@
 from cmu_graphics import *
 import random, copy
 from PIL import Image
+import time
 
 # basic background/framework of app + buttons
 
@@ -54,9 +55,11 @@ class Button:
         drawLabel(self.text, self.x+self.size/2, self.y+self.ysize/2, 
                   size=15, align='center')
 
-    def drawIcon(self, app):
-        for image in app.pilImages2:
-            drawImage(image, self.x, self.y, align='left-top')
+    def drawIcon(self, image):
+        # print('app pil list check', app.pilImages)
+        # for image in app.pilImages:
+        #     time.sleep(0.05)
+        drawImage(image, self.x, self.y, align='left-top')
     
     def drawLayerControl(self):
         drawRect(self.x, self.y, self.size, self.ysize, 
@@ -83,8 +86,8 @@ class Button:
             return True
         return False
     
-    def func(self, app):
-        self.func()
+    def getFunc(self, app):
+        return self.func
 
     def __eq__(self, other):
         if isinstance(other, Button):
@@ -181,6 +184,7 @@ class Layer(Canvas):
             return
         color = pointList[0][0]
         pts = pointList[1]
+        print('points coordinates', pts)
         for i in range(1, len(pts)-1):
             drawLine(pts[i-1][0], pts[i-1][1], 
                     pts[i][0], pts[i][1], lineWidth=6, 
@@ -263,11 +267,13 @@ def onAppStart(app):
     app.new = [] # add this to layer's lists after
 
 def startTools(app):
+    app.canDraw = False
+    app.finishDraw = False
     app.oval = [False]
     app.rect = [False]
     print('app.rect', app.rect)
     app.pastel = [False]
-    app.pencil = [True]
+    app.pencil = [False]
     app.straight = [False]
     app.currColor = 'red'
     app.eraser = [False]
@@ -328,24 +334,21 @@ def startLayerTools(app): # layer tools
 
 def loadPilImage(path):
     return Image.open(path)
+#app.img 
 
 def startIcons(app):
     app.paths = ['images/pastel.jpg','images/pencil.jpg',
                 'images/oval.jpg', 'images/rectangle.jpg',
                 'images/line.jpg', 'images/eraser.jpg', 
                 'images/undo.jpg', 'images/redo.jpg', 
-                'images/zoomIn.jpg', 'images/zoomOut.jpg' ] # 10 icon images
+                 'images/zoomIn.jpg', 'images/zoomOut.jpg'] # 10 icon images
     app.pilImages = []
     for path in app.paths:
-        a = copy.deepcopy(loadPilImage(path))
-        app.pilImages.append(a)
-    app.pilImages2 = []
-    for imagei in app.pilImages:
+        imagei = loadPilImage(path)
         imageWidth, imageHeight = imagei.size
         pilImage2 = imagei.resize((imageWidth//6, imageHeight//6))
-        app.pilImages2.append(pilImage2)
-    for i in range(len(app.pilImages2)):
-        app.pilImages2[i] = CMUImage(app.pilImages2[i])
+        a = CMUImage(pilImage2)
+        app.pilImages.append(a)
 
 def onMousePress(app, mX, mY):
     # after clicking on a btton 
@@ -359,11 +362,28 @@ def onMousePress(app, mX, mY):
             currButton = button
             if currButton.respondToPress(app, mX, mY): # call tools to activate 
                 tool = app.tools[row][col]
-                print('test app.tols[row][col]', app.tools[row][col])
+                print('test app.tools[row][col]', app.tools[row][col])
+                app.canDraw = True
                 tool[0] = True
                 print(app.tools)
                 app.currentMove = tool
+                app.canDraw = True
                 print('currently doing what', app.currentMove)
+                rows = len(app.tools)
+                cols = len(app.tools[0])
+                for row in range(rows):
+                    for col in range(cols):
+                        tool = app.tools[row][col]
+                        if tool[0] == True:
+                            print('which tool coordinates', row, col)
+                            if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
+                                                        app.oval, app.rect, app.straight]:
+                                app.new[1].append((mX, mY))
+                                print('start append?', app.new[1])
+                            elif app.tools[row][col] in [app.redo, app.undo]:
+                                app.startLayer.redo(app)
+                                app.startLayer.undo(app)
+
             else:
                 app.tools[row][col][0] = False
     elif mX >= app.width - app.width/5:
@@ -381,15 +401,6 @@ def onMousePress(app, mX, mY):
         currButton = button
         if currButton.respondToPress(app, mX, mY):
             app.startLayer.opacity = button.opacity 
-    else:
-        if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
-                                    app.oval, app.rect, app.straight]:
-                   
-                  pp.new[1].append((mX, mY))
-                    print('start append?', app.new[1])
-                elif app.tools[row][col] in [app.redo, app.undo]:
-                    app.startLayer.redo(app)
-                    app.startLayer.undo(app)
 
 def onMouseDrag(app, mX, mY):
     rows = len(app.tools)
@@ -409,13 +420,15 @@ def onMouseRelease(app, mX, mY):
     for row in range(rows):
         for col in range(cols):
             tool = app.tools[row][col]
-            if tool[0] == True:
+            if tool[0] == True and app.canDraw: 
                 if tool in [app.oval, app.rect, app.straight]:
                     app.new[1].append((mX, mY))
+                    print('point 2????', app.new)
                 lstToAdd = app.startLayer.getInfo(tool)
                 lstToAdd.append(app.new)
                 app.new = []
                 app.lastMove = app.currentMove 
+                app.finishDraw = True
 
 def onKeyPress(app, key):
     if key == 'left':
@@ -437,9 +450,11 @@ def redrawAll(app):
     app.layers.allLayers[0].drawCanvas(app, startX, 0, endX, app.slate.h-10)
     app.slate.drawToolBar(app)
     drawLayerAllInfo(app)
-    for button in app.buttons: # regular tool buttons
+    for i in range(len(app.buttons)): # regular tool buttons
+        button = app.buttons[i]
         button[0].drawButton()
-        button[0].drawIcon(app)
+        button[0].drawIcon(app.pilImages[i])
+        
 
 def drawLayerAllInfo(app):
     for i in range(len(app.layerControls)): # layer add/del buttons
@@ -460,9 +475,9 @@ def drawLayerAllInfo(app):
 
     for layer in app.layers.allLayers: #app, draw current, color 
         for [toggle, lst, func] in layer.allItems:
-            if toggle:
+            if toggle[0] == True and len(lst) >= 2:
                 print('toggle test', toggle)
-                layer.func(app.new) # most current line
+                func(lst)
         layer.drawOld() #2d list of points
     
 runApp(width=800, height=600)
