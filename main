@@ -28,6 +28,8 @@ class Frame:
         # tool bar and tools
         drawRect(0, 0, app.width/5+10, app.height, 
                  fill=self.color)
+        drawRect(0, 0, app.width, 10, fill=self.color)
+        drawRect(0, app.height-10, app.width, 10, fill=self.color)
         drawLine(app.width/5, 0, app.width/5, app.height, fill='black')
         drawRect(app.width-app.width/5-10, 0, self.w, app.height,
                  fill=self.color)
@@ -129,22 +131,25 @@ class Layer(Canvas):
         self.opacity = 100
         self.pencilLinesList = [] # [[[color][points]]] format 
         self.pastelLinesList = []
+        self.eraserLinesList = []
         self.allItems = [
              [app.rect, self.rectsList, self.drawRects], 
              [app.oval, self.ovalsList, self.drawOvals],
              [app.straight, self.straightLinesList, 
                                 self.drawStraightLines], 
              [app.pencil, self.pencilLinesList, self.drawPencilLines],
-             [app.pastel, self.pastelLinesList, self.drawPastelLines]]
+             [app.pastel, self.pastelLinesList, self.drawPastelLines],
+             [app.eraser, self.eraserLinesList, self.erase]]
         self.redo = []
         self.lastMove = None
 
     def addOpacity(self):
-        self.opacity += 20
+        print('adding opactiy', self.opacity)
+        self.opacity += 10
     
     def deleteOpacity(self):
-        # print('self opacity layer', self.opacity)
-        self.opacity -= 20
+        print('deleting opacity', self.opacity)
+        self.opacity -= 50
 
     def getInfo(self, other): # gets the list the info needs to get added to
         for toggle, lst, func in self.allItems:
@@ -160,26 +165,29 @@ class Layer(Canvas):
         return (Layer.count, self.opacity)
 
     def drawRects(self, ptList):
-        if len(ptList[1]) < 3:
+        print('entering draw rectangle', ptList)
+        if len(ptList[1]) < 2:
             return
-        color = ptList[0]
+        color = ptList[0][0]
         print('point list', ptList[1])
         (tl, tr), (bl, br) = ptList[1]
-        w, h = abs(bl - tr), abs(br - tr)
+        w, h = abs(bl - tl), abs(br - tr)
         drawRect(tl, tr, w, h, fill=color, opacity=self.opacity)
         # print('try find rect location', tl, tr, w, h, color)
     
     def drawOvals(self, ptList):
-        if len(ptList[1]) < 3:
+        if len(ptList[1]) < 2:
             return
-        color = ptList[0]
+        color = ptList[0][0]
         # print('pts of Ovals', ptList)
-        (tl, tr), (bl, br) = ptList[1]
-        w, h = abs(bl - tr), abs(br - tr)
-        drawOval(tl, tr, w, h, fill=color, opacity=self.opacity)
+        (x1, y1), (x2, y2) = ptList[1]
+        w, h = abs(x2-x1), abs(y2-y1)
+        drawOval(x1, y1, w, h, fill=color, 
+                 opacity=self.opacity, align='left-top')
     
     def drawPastelLines(self, pointList, opacity=100):
         o = self.opacity
+        print('o opacity???', o)
         if len(pointList) < 1:
             return
         color = pointList[0][0]
@@ -210,8 +218,9 @@ class Layer(Canvas):
 
     def drawStraightLines(self, pointList, opacity=100):
         o = self.opacity
-        if len(pointList) < 1:
+        if 0 < len(pointList) < 2:
             return
+        print('point list for straight lines', pointList)
         color = pointList[0][0]
         pts = pointList[1]
         drawLine(pts[0][0], pts[0][1], pts[1][0], pts[1][1],
@@ -225,13 +234,15 @@ class Layer(Canvas):
 
     def erase(self, pointList):
         o = 100
-        if len(pointList) < 1:
+        if len(pointList) < 2:
             return
         color = 'white' # ignore current color
         pts = pointList[1]
         for i in range(1, len(pts)):
+            drawOval(pts[i-1][0], pts[i-1][1], 20, 20, 
+                     fill=color, align='left-top')
             drawLine(pts[i-1][0], pts[i-1][1], 
-                    pts[i][0], pts[i][1], fill=color, opacity=o) 
+                    pts[i][0], pts[i][1], lineWidth= 20, fill=color, opacity=o) 
 
     def undo(self, app): # only works on current layer, list of type
         lst = self.getInfo(app.lastMove)
@@ -294,8 +305,7 @@ def startTools(app):
     app.tools = [[app.pastel, app.pencil],
                  [app.oval, app.rect],
                  [app.straight, app.eraser], 
-                 [app.undo, app.redo], 
-                 [app.zoomIn, app.zoomOut]] # get rid of zoom
+                 [app.undo, app.redo]] # get rid of zoom
                 # write a note that says that panning uses arrow keys 
                 # also need a color selector
                 # new layer
@@ -304,8 +314,10 @@ def startTools(app):
 def startLeftTools(app): # regular drawing tools
     app.buttons = [] # buttons to press to switch tools above
     start = app.width/30
-    for row in range(5): 
-        for col in range(2):
+    rows = len(app.tools)
+    cols = len(app.tools[0])
+    for row in range(rows): 
+        for col in range(cols):
             button = Button(60*col+start, 60*row+20, 50, 
                             app.slate.color, app.slate.border)
             app.buttons.append([button, row, col])
@@ -317,9 +329,9 @@ def startLayerTools(app): # layer tools
     start = app.width * 4 / 5
     width = app.width / 12
     height = 0.5 * width
-    controls = ['+ layer', '- layer', '+ opacity', '- opacity']
     actions = [app.layers.addLayer, app.layers.deleteLayer,
                app.startLayer.addOpacity, app.startLayer.deleteOpacity]
+    controls = ['+ layer', '- layer', '+ opacity', '- opacity']
     for i in range(len(controls)):
         m = 0
         if i % 2 == 0:
@@ -340,8 +352,7 @@ def startIcons(app):
     app.paths = ['images/pastel.jpg','images/pencil.jpg',
                 'images/oval.jpg', 'images/rectangle.jpg',
                 'images/line.jpg', 'images/eraser.jpg', 
-                'images/undo.jpg', 'images/redo.jpg', 
-                 'images/zoomIn.jpg', 'images/zoomOut.jpg'] # 10 icon images
+                'images/undo.jpg', 'images/redo.jpg'] # 10 icon images
     app.pilImages = []
     for path in app.paths:
         imagei = loadPilImage(path)
@@ -361,13 +372,11 @@ def onMousePress(app, mX, mY):
             currButton = button
             if currButton.respondToPress(app, mX, mY): # call tools to activate 
                 tool = app.tools[row][col]
-                print('test app.tools[row][col]', app.tools[row][col])
+                print('turned on tool', row, col)
                 app.canDraw = True
                 tool[0] = True
                 print(app.tools)
                 app.currentMove = tool
-                app.canDraw = True
-                print('currently doing what', app.currentMove)
             else:
                 app.tools[row][col][0] = False
     elif mX >= app.width - app.width/5:
@@ -377,6 +386,7 @@ def onMousePress(app, mX, mY):
             if currButton.respondToPress(app, mX, mY):
                 print('function check', currButton.getFunc(app))
                 currButton.getFunc(app)
+                # is it getting called?
     else:
         print('mouse press in middle', app.new)
         rows = len(app.tools)
@@ -387,11 +397,12 @@ def onMousePress(app, mX, mY):
                 if tool[0] == True:
                     print('which tool coordinates', row, col)
                     print('testing app.new', app.new)
-                    if app.tools[row][col] in [app.pencil, app.pastel, app.eraser,
-                                                app.oval, app.rect, app.straight]:
+                    if tool in [app.pencil, app.pastel, app.eraser]:
                         app.new[1].append((mX, mY))
                         print('start append?', app.new[1])
-                    elif app.tools[row][col] in [app.redo, app.undo]:
+                    elif tool in [app.oval, app.rect, app.straight]:
+                        app.new[1].append((mX, mY))
+                    elif tool in [app.redo, app.undo]:
                         app.startLayer.redo(app)
                         app.startLayer.undo(app)
 
@@ -401,18 +412,14 @@ def onMouseDrag(app, mX, mY):
     for row in range(rows):
         for col in range(cols):
             tool = app.tools[row][col]
-            # print('enter drag tool case', mX, mY)
-            # print(tool)
-            print('dragging mouse app.new', app.new)
             if tool[0] == True:
-                # print('tool enter case')
                 if tool in [app.pencil, app.pastel, app.eraser]:
                     app.new[1].append((mX, mY))
         
 def onMouseRelease(app, mX, mY):
     #add it to the list of items
     #  #  designated color is now the last itemin list
-    print('on mouse release app. new list',app.new)
+    print('on mouse release app. new list', app.new)
     rows = len(app.tools)
     cols = len(app.tools[0])
     for row in range(rows):
@@ -420,17 +427,22 @@ def onMouseRelease(app, mX, mY):
             tool = app.tools[row][col]
             if tool[0] == True and app.canDraw: 
                 if tool not in [app.redo, app.undo, app.zoomIn, app.zoomOut]:
-                    if tool in [app.oval, app.rect, app.straight]:
-                        app.new[1].append((mX, mY))
-                        print('pass mouse release????')
-                        # print('point 2????', app.new)
-                    lstToAdd = app.startLayer.getInfo(tool)
-                    print(lstToAdd)
-                    lstToAdd.append(app.new)
-    app.new = [['yellow'], []] # maybe on mouse release color not resetting?
-    app.lastMove = app.currentMove 
-    app.finishDraw = True
-
+                    if tool not in [app.oval, app.rect, app.straight]:
+                        lstToAdd = app.startLayer.getInfo(tool)
+                        print(lstToAdd)
+                        lstToAdd.append(app.new)
+                        app.new = [['yellow'], []] # maybe on mouse release color not resetting?
+                        app.lastMove = app.currentMove 
+                        app.finishDraw = True
+                    else:
+                        if len(app.new[1]) >= 2:
+                            lstToAdd = app.startLayer.getInfo(tool)
+                            print(lstToAdd)
+                            lstToAdd.append(app.new)
+                            app.new = [[app.currColor], []] 
+                            app.lastMove = app.currentMove 
+                            app.finishDraw = True
+                        
 def onKeyPress(app, key):
     if key == 'left':
         app.dx += 5
@@ -443,20 +455,20 @@ def onKeyPress(app, key):
     print('pan key')
 
 def redrawAll(app):
-    #resizes app bar
     app.slate.drawBg(app) #draws very background of app
     startX = app.slate.canvasW
     endX = app.slate.w - startX*2
     #draw white background for first layer (default look)
     app.layers.allLayers[0].drawCanvas(app, startX, 0, endX, app.slate.h-10)
-    app.slate.drawToolBar(app)
     drawLayerAllInfo(app)
+    app.slate.drawToolBar(app)
+    drawLayerButtons(app)
     for i in range(len(app.buttons)): # regular tool buttons
         button = app.buttons[i]
         button[0].drawButton()
         button[0].drawIcon(app.pilImages[i])
 
-def drawLayerAllInfo(app):
+def drawLayerButtons(app):
     for i in range(len(app.layerControls)): # layer add/del buttons
         button = app.layerControls[i]
         button.drawButton()
@@ -464,7 +476,7 @@ def drawLayerAllInfo(app):
                     
     for i in range(len(app.layerCtOp)):
         ct = app.layerCtOp[i][0]
-        opacity = app.layerCtOp[i][1]
+        layer = app.layers.allLayers[i]
         start = app.width * 4.2 / 5
         top = app.width * 3.2 / 5
         w, h = 100, 50
@@ -472,16 +484,16 @@ def drawLayerAllInfo(app):
                  fill=app.slate.color, border='black')
         drawLabel(f'layer {ct}', start+w/2, top+h/3, 
                   size=12, align='center')
-        drawLabel(f'opacity {opacity}%', start+w/2, top+h/1.5, 
+        drawLabel(f'opacity {layer.opacity}%', start+w/2, top+h/1.5, 
                   size=12, align='center')
 
+def drawLayerAllInfo(app):
     for layer in app.layers.allLayers:
         layer.drawOld() 
 
     for toggle, lst, func in app.startLayer.allItems:
-        if toggle == app.currentMove:
+        if toggle == app.currentMove and len(app.new[1]) > 1:
             f = app.startLayer.func(app.currentMove)
             f(app.new)
-
 
 runApp(width=800, height=600)
