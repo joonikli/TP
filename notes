@@ -1,6 +1,43 @@
-from cmu_graphics import *
-# from Layers import *
 
+# notes for myself/plans
+
+'''Notes on what i want
+
+buttons left:
+
+color palette selector
+pastel, pen - done
+straight line - done
+rect, circle
+size adjustment 
+polygon(?)
+undo/redo
+fill bucket
+pan/zoom 
+                pan: left/right
+                zoom: down/up ()
+
+
+buttons right:
+new layer*
+layer opacity*
+delete layer*
+layer blending modes ?
+
+pastel, pen
+layer opacity
+undo/redo
+eraser function
+fill bucket
+pan/zoom
+
+download file drawn (take screen shot)
+
+resize?
+straight line
+sprite animation?
+
+'''
 class Colors:
     def __init__(self, app):
         pass
@@ -12,90 +49,3 @@ class Colors:
         #g
         pass
     
-class Frame:
-    # draws buttons and basic setup of drawing app
-    def __init__(self, app):
-        pass
-
-    def draw(self, app):
-        self.drawBg(app)
-        self.drawButtons(app)
-        self.drawCanvas()
-    
-    def drawBg(self, app):
-        drawRect(0, 0, app.width, app.height, fill=rgb(99, 97, 97))
-        drawRect(0, 0, app.width/5, app.height, fill=rgb(99, 97, 97), border='black')
-    
-    def drawButtons(self, app):
-        pass
-    
-    def drawCanvas(self):
-        pass
-    
-
-class Layer:
-    def __init__(self):
-        self.rects = []
-        self.ovals = []
-        self.polygons = []
-        self.straightLines = []
-        self.pencilLines = []
-        self.brushLines = []
-        
-    def drawOld(self):
-        pass 
-        #draws everything so calls drawStraightLine(self), etc, etc
-
-    def drawStraightLine(self):
-        pass
-
-    def rect(self, tl, tr, w, h, fill):
-        pass
-        self.rects.append()
-    
-    def oval(self, mx, my, w, h, fill):
-        pass
-        self.ovals.append()
-
-    def straightline(self):
-        pass
-        self.straightLines.append()
-
-    def pencilLines(self):
-        pass
-        #makes one item, then adds it to self.pencilLines when done
-    
-    def undo(self):
-        pass
-
-    def redo(self):
-        pass
-
-def onAppStart(app):
-    app.blankSlate = Frame(app)
-    app.startLayer = Layer()
-    app.layers = [app.startLayer]
-    app.newPencilLine = [] # add this to pencilLines after
-
-def onMousePress(app):
-    # after clicking on a button 
-    # initialize that shape/line or layer
-    # if button is draw pencil line, call Layer.pencilLines
-    pass
-
-def onMouseDrag(app):
-    pass
-
-def onMouseRelease(app):
-    #add it to the list of items
-    pass
-
-def redrawAll(app):
-    app.blankSlate.draw(app)
-    for layer in app.layers:
-        #draw layer
-        pass
-    pass
-
-
-runApp(width=800, height=600)

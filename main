@@ -44,6 +44,10 @@ class Button:
         drawRect(self.x, self.y, self.size, self.size, 
                  fill=self.color, border=self.border)
 
+    def drawIcon(self, app):
+        for image in app.pilImages2:
+            drawImage(image, self.x, self.y, align='left-top')
+
     def isPressed(self, mX, mY):
         bRight = self.x + self.size
         bBottom = self.y + self.size
@@ -202,12 +206,6 @@ def startTools(app):
                 # write a note that says that panning uses arrow keys 
                 # also need a color selector
                 # new layer
-    app.paths= ['', ] # 10 icon images
-    pilImages = [loadPilImage(path) for path in app.paths]
-    for image in pilImages:
-        imageWidth, imageHeight = image.size
-        pillImage2.append()
-
     app.buttons = [] # buttons to press to switch tools above
     start = app.width/30
     for row in range(5): 
@@ -216,6 +214,18 @@ def startTools(app):
             button = Button(60*col+start, 60*row+10, 50, 
                             app.slate.color, app.slate.border, tool)
             app.buttons.append(button)
+    startIcons(app)
+
+def startIcons(app):
+    app.paths= ['', ] # 10 icon images
+    pilImages = [loadPilImage(path) for path in app.paths]
+    app.pilImages2 = []
+    for image in pilImages:
+        imageWidth, imageHeight = image.size
+        pilImage2 = image.resize((imageWidth//10, imageHeight//10))
+        app.pilImages2.append(pilImage2)
+    for i in range(len(app.pilImages2)):
+        app.pilImages2[i] = CMUImage(app.pilImages2[i])
 
 def onMousePress(app, mX, mY):
     # after clicking on a btton 
