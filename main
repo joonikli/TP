@@ -1,0 +1,236 @@
+from cmu_graphics import *
+import random, copy
+
+# basic background/framework of app + buttons
+
+class Frame:
+    # draws basic setup of drawing app
+    def __init__(self, app):
+        self.x = 0
+        self.y = 0
+        self.w = app.width
+        self.h = app.height
+        self.toolsW = self.w/5
+        self.toolsH = app.height
+        self.canvasW = self.w/5 
+        self.canvasH = self.toolsH 
+        self.color = rgb(99, 97, 97)
+        self.border = 'black'
+    
+    def drawBg(self, app):
+        # background of app
+        drawRect(0, 0, app.width, app.height, 
+                 fill=self.color) #background
+    
+    def drawToolBar(self, app):
+        # tool bar and tools
+        drawRect(0, 0, app.width/5, app.height, 
+                 fill=self.color, border='black')
+        drawRect(app.width-app.width/5, 0, self.w, app.height,
+                 fill=self.color, border='black')
+
+class Button:
+    def __init__(self, x, y, size, color, border, tool):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.color = color
+        self.border = border
+        self.tool = tool # current tool
+
+    def drawButton(self):
+        # 8 buttons: 
+        drawRect(self.x, self.y, self.size, self.size, 
+                 fill=self.color, border=self.border)
+    
+    def isPressed(self, mX, mY):
+        bRight = self.x + self.size
+        bBottom = self.y + self.size
+        if (self.x <= mX <= bRight and 
+            self.y <= mY <= bBottom):
+            return True
+        return False
+    
+    def respondToPress(self, mX, mY, layer):
+        if self.isPressed(mX, mY): # ne
+            self.tool = True # calls function !
+
+class Canvas:
+    # what you draw on, a white canvas
+    def __init__(self, x, y, w, h, dx=0, dy=0, dsize=1, opacity=1):
+        self.canvasLeft = x
+        self.canvasTop = y
+        self.canvasWidth = w
+        self.canvasHeight = h
+        self.dx = dx
+        self.dy = dy
+        self.dsize = dsize
+        self.opacity = 100
+        # self.opacity = 0  #test
+
+#app.startLayer.drawCanvas(app, startX, 0, endX, app.slate.h-10)
+    def drawCanvas(self, app, x, y, w, h, dx=0, dy=0, dsize=1):  
+        self.canvasLeft = x + self.dx + 10
+        self.canvasTop = y + self.dy + 10
+        self.canvasWidth = w*self.dsize - 20
+        self.canvasHeight = h*self.dsize - 10
+        print('check inside func', self.canvasLeft, self.canvasTop, 
+              self.canvasWidth, self.canvasHeight)
+        drawRect(self.canvasLeft, self.canvasTop, 
+                 self.canvasWidth, self.canvasHeight, fill='white', 
+                 opacity=self.opacity)
+        
+class Layer(Canvas):
+    # puts all drawings into an instance of a layer, can stack layers 
+    def __init__(self, x=0, y=0, w=0, h=0, dx=0, dy=0, dsize=1):
+        super().__init__(x, y, w, h, dx, dy, dsize)
+        self.rectsList = []
+        self.ovalsList = []
+        self.straightLinesList = []
+        self.opacity = 100
+        self.pencilLinesList = [] # x, y, x1, y1, fill(changes), opacity(changes)
+        self.pastelLinesList = []
+        self.allItems = [
+             [self.rectsList, self.drawRects], 
+             [self.ovalsList, self.drawOvals],
+             [self.straightLinesList, self.drawStraightLines], 
+             [self.pencilLinesList, self.drawPencilLines],
+             [self.pastelLinesList, self.drawPastelLines]]
+        
+        self.undos = []
+        self.redos = []
+
+    def drawRects(self, tl, tr, w, h, fill):
+        pass
+        self.rects.append()
+    
+    def drawOvals(self, mx, my, w, h, fill):
+        pass
+        self.ovals.append()
+    
+    def drawPastelLines(self, pointList, opacity=100):
+        o = opacity
+        pts = pointList
+        for i in range(1, len(pts)-1):
+            drawLine(pts[i-1][0], pts[i-1][1], 
+                    pts[i][0], pts[i][1], lineWidth=6, 
+                    fill=pts[-1], opacity=o-40)
+            drawLine(pts[i-1][0]*r, pts[i-1][1]*r, 
+                    pts[i][0]*r, pts[i][1]*r, lineWidth=12, 
+                    fill=pts[-1], opacity=o-50)
+            drawLine(pts[i-1][0]*r, pts[i-1][1]*r, 
+                    pts[i][0]*r, pts[i][1]*r, lineWidth=18, 
+                    fill=pts[-1], opacity=o-70)
+
+    def drawPencilLines(self, pointList, opacity=100):
+        print('inside layer class', pointList)
+        o = opacity
+        pts = pointList
+        for i in range(1, len(pts)-1):
+            drawLine(pts[i-1][0], pts[i-1][1], 
+                    pts[i][0], pts[i][1], fill=pts[-1], opacity=o)   
+
+    def drawStraightLines(self, pointList, opacity=100):
+        o = opacity
+        pts = pointList
+        drawLine(pts[0][0], pts[0][1], pts[1][0], pts[1][1],
+                fill=pts[-1], opacity=o) 
+
+    def colorChanger(self, app):
+        r = random.randrange(0, 256)
+        g = random.randrange(0, 256)
+        b = random.randrange(0, 256)
+        app.currColor = rgb(r, g, b)
+        pass 
+
+    def erase(self):
+        # circles
+        pass
+
+    def undo(self, app): # only works on current layer
+        pass
+
+    def redo(self, app):
+        pass
+
+    def drawOld(self): 
+        # draws everything besides what ur currently drawing
+        for itemList, func in self.allItems:
+            for item in itemList:
+                func(item)
+            # elif app.pastel:
+
+def pan(app):
+    print('move canvas left and right')
+
+def zoom(app):
+    print('zoom in and out')
+                
+def onAppStart(app):
+    app.slate = Frame(app) # initial background screen 
+    app.startLayer = Layer() 
+    app.layers = [app.startLayer] # store all layers
+    app.new = [] # add this to layer.freeLinesList after
+    app.oval = False
+    app.rect = False
+    app.pastel = False
+    app.pencil = True
+    app.straight = False
+    app.colorChange = False
+    app.currColor = 'red'
+    app.erase = False
+    app.undo = False
+    app.redo = False
+    app.pan = False
+    app.zoom = False
+    app.tools = [[app.pastel, app.pencil],
+                 [app.oval, app.rect],
+                 [app.straight, app.colorChange], 
+                 [app.erase], 
+                 [app.undo, app.redo], 
+                 [app.pan, app.zoom]]
+    app.buttons = [] # buttons to press to switch tools above
+    start = app.width/30
+    for row in range(6): 
+        for col in range(2):
+            if (row, col) != (3, 1):
+                tool = app.tools[row][col]
+                button = Button(60*col+start, 60*row+10, 50, 
+                                app.slate.color, app.slate.border, tool)
+                app.buttons.append(button)
+
+def onMousePress(app, mX, mY):
+    # after clicking on a btton 
+    # initialize that shape/line or layer
+    # if button is draw pencil line, call Layer.pencilLines
+    # wahtever color is selected
+    for i in range(len(app.buttons)):
+        currButton = app.buttons[i]
+        currButton.respondToPress(mX, mY, app.startLayer) # call function to activate it
+    
+def onMouseDrag(app, mX, mY):
+    if app.pencil:
+        app.new.append((mX, mY))
+    
+def onMouseRelease(app, mX, mY):
+    #add it to the list of items
+    app.new.append(app.currColor) #  designated color is now the last itemin list
+    app.startLayer.pencilLinesList.append(app.new)
+    app.new = []
+
+def redrawAll(app):
+    #resizes app bar
+    app.slate.drawBg(app) #draws very background of app
+    startX = app.slate.canvasW
+    endX = app.slate.w - startX*2
+    #draw white background for first layer (default look)
+    app.startLayer.drawCanvas(app, startX, 0, endX, app.slate.h-10)
+    for layer in app.layers: #appp, draw current, color 
+        if len(app.new) > 2:
+            layer.drawPencilLines(app.new) # most current line
+        layer.drawOld() #2d list of points
+    app.slate.drawToolBar(app)
+
+# (app, pointList, color, opacity=100):
+
+runApp(width=800, height=600)
