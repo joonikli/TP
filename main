@@ -252,10 +252,9 @@ class globalLayer:
     def __init__(self):
         self.allLayers = []
     
-    def addLayer(self, other, app):
+    def addLayer(self, other):
         self.allLayers.append(other)
-        app.layerCtOp.append([Layer.Ct, other.opacity])
-    
+
     def deleteLayer(self):
         self.allLayers.pop()
                 
