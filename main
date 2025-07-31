@@ -162,7 +162,6 @@ class Layer(Canvas):
         if len(ptList[1]) < 2:
             return
         color = ptList[0][0]
-        print('point list', ptList[1])
         (tl, tr), (bl, br) = ptList[1]
         w, h = abs(bl - tl), abs(br - tr)
         drawRect(app.dx+tl, app.dy+tr, w, h, fill=color, opacity=self.opacity)
