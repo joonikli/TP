@@ -2,7 +2,7 @@ from cmu_graphics import *
 import random, copy
 from PIL import Image
 
-### joana liu ##################################################################
+### by: joana liu ##################################################################
 # did not use sources outside of CS Academy/the TAs/TP Resources Doc
 
 
