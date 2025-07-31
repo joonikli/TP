@@ -2,7 +2,10 @@ from cmu_graphics import *
 import random, copy
 from PIL import Image
 
+### joana liu ##################################################################
 # did not use sources outside of CS Academy/the TAs/TP Resources Doc
+
+
 
 class Frame: 
     # draws basic setup of drawing app
@@ -133,8 +136,8 @@ class Layer(Canvas):
              [app.pastel, self.pastelLinesList, self.drawPastelLines],
              [app.changeColor, self.colorChangeList, self.colorChanger]
              ]
+        self.chronological = []
         self.redoList = []
-        self.lastMove = None
         self.undoCount = 0
 
     def getInfo(self, other): # gets the list the info needs to get added to
@@ -144,8 +147,12 @@ class Layer(Canvas):
             
     def func(self, other):
         for toggle, lst, func in self.allItems:
-            if toggle == other:
-                return func
+            if isinstance(other[0], bool):
+                if toggle == other:
+                    return func
+            elif isinstance(other, list):
+                if other in lst:
+                    return func
 
     def getLayerCtOp(self): # for labelling info about that layer
         Layer.count += 1
@@ -228,20 +235,33 @@ class Layer(Canvas):
 
     def undoMove(self, app): 
         self.undoCount += 1
-        if len(app.lastMoveList) > 0:
-            undid = app.lastMoveList.pop()
-            self.redoList.append(undid)
+        if len(app.startLayer.chronological) > 0:
+            undid = app.startLayer.chronological[-1]
+            self.redoList.append([undid, self.func(undid)])
+
+            for toggle, lst, func in app.startLayer.allItems:
+                if undid in lst:
+                    lst.remove(undid)
+            app.startLayer.chronological.pop()
 
     def redoMove(self, app):
         if self.undoCount >= 1 and len(self.redoList) > 0:
             redid = self.redoList.pop()
-            app.lastMoveList.append(redid)
+            app.startLayer.chronological.append(redid[0])
+            for toggle, lst, func in app.startLayer.allItems:
+                if redid[1] == func:
+                    lst.append(redid[0])
 
     def drawOld(self, app): 
         # draws stored items
-        for toggle, itemList, func in self.allItems[:-1]: 
-            for item in itemList:
-                func(app, item)
+        for lst0 in self.chronological:
+            if self.func(lst0) in [self.drawOvals, self.drawRects]:
+                func = self.func(lst0)
+                func(app, lst0)
+                continue
+            for toggle, lst1, func in self.allItems[:-1]:
+                if lst0 in lst1:
+                    func(app, lst0)
 
 class globalLayer: 
     # originally to be used for adding layer functionality, but I cut it.
@@ -255,6 +275,7 @@ class globalLayer:
         self.allLayers.pop()
                 
 def onAppStart(app):
+    app.setMaxShapeCount(4000)
     app.lastMoveList = []
     app.drawPt = False
     app.pause = True
@@ -279,6 +300,7 @@ def startTools(app):
     app.eraser = [False]
     app.undo = [False]
     app.redo = [False]
+    app.redid = [] # things u redid 
     app.changeColor = [False]
     # for panning: dx, dy
     app.dx = 0
@@ -336,7 +358,7 @@ def onMousePress(app, mX, mY):
                 app.canDraw = True
                 tool[0] = True
                 app.currentMove = tool
-                app.currentMoveList = app.startLayer.getInfo(tool)
+                app.currentMoveList = app.startLayer.getInfo(app.currentMove)
                 app.pressing = app.buttons.index([button, row, col])
                 if tool in [app.redo, app.undo]:
                     if app.redo[0]:
@@ -345,7 +367,8 @@ def onMousePress(app, mX, mY):
                         app.startLayer.undoMove(app)
             else: # deactivate other tools
                 app.tools[row][col][0] = False
-    elif mX <= app.width - (app.width/5): # if mouse is on canvas
+
+    elif mX <= app.width - (app.width/5): # if mouse is doing smthing on canvas
         app.drawPt = True
         app.drawPtList.append((mX-app.dx, mY-app.dy))
         rows = len(app.tools)
@@ -384,20 +407,28 @@ def onMouseRelease(app, mX, mY):
                         if tool not in [app.oval, app.rect, app.straight]:
                             # for tools that rely on mouse dragging
                             lstToAdd = app.startLayer.getInfo(tool)
-                            print(app.new)
                             lstToAdd.append(app.new)
-                            app.new = [[app.currColor], []] 
+
                             app.lastMove = app.currentMove
                             app.lastMoveList = app.currentMoveList
+
+                            # chronological 
+                            app.startLayer.chronological.append(app.new)
+                            app.new = [[app.currColor], []] 
+                            
                         else:
                             if len(app.new[1]) >= 2:
                                 # for tools that only use 2 points
                                 lstToAdd = app.startLayer.getInfo(tool)
-                                print(lstToAdd)
                                 lstToAdd.append(app.new)
-                                app.new = [[app.currColor], []] 
+
                                 app.lastMove = app.currentMove
-                                app.lastMoveList = app.currentMoveList
+                                app.lastMoveList.append(app.currentMoveList[-1])
+
+                                # chronological 
+                                app.startLayer.chronological.append(app.new)
+                                app.new = [[app.currColor], []] 
+                                
                         app.drawPtList = []
                         
 def onKeyPress(app, key):
@@ -456,8 +487,7 @@ def drawLayerAllInfo(app):
             drawLine(app.dx+x, app.dy+y-5, app.dx+x, app.dy+y+5)
 
     # draws stored items and... 
-    for layer in app.layers.allLayers:
-        layer.drawOld(app) 
+    app.startLayer.drawOld(app) 
 
     # whatever you are in the process of drawing 
     if len(app.new[1]) > 1:
