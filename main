@@ -204,7 +204,7 @@ class Layer(Canvas):
 
     def colorChanger(self):
         r = random.randrange(100, 256)
-        g = random.randrange(50, 256)
+        g = random.randrange(100, 256)
         b = random.randrange(100, 256)
         return rgb(r, g, b)
 
@@ -252,6 +252,7 @@ class globalLayer:
         self.allLayers.pop()
                 
 def onAppStart(app):
+    app.lastMoveList = []
     app.drawPt = False
     app.pause = True
     app.drawPtList = []
@@ -291,6 +292,7 @@ def startTools(app):
 
 def startLeftTools(app): # regular drawing tools
     app.buttons = [] # buttons to press to switch between tools above
+    app.pressing = None
     start = app.width/30
     rows = len(app.tools)
     cols = len(app.tools[0])
@@ -332,6 +334,7 @@ def onMousePress(app, mX, mY):
                 tool[0] = True
                 app.currentMove = tool
                 app.currentMoveList = app.startLayer.getInfo(tool)
+                app.pressing = app.buttons.index([button, row, col])
                 if tool in [app.redo, app.undo]:
                     if app.redo[0]:
                         app.startLayer.redoMove(app)
@@ -423,6 +426,10 @@ def redrawAll(app):
         button = app.buttons[i]
         button[0].drawButton()
         button[0].drawIcon(app.pilImages[i])
+        if app.pressing == i:
+            drawRect(button[0].x, button[0].y, button[0].size,
+                     button[0].size, fill='lightBlue', 
+                     border='lightBlue', opacity=40)
     if app.pause:
         drawInstructions(app)
 
