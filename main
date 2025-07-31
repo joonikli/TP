@@ -2,6 +2,8 @@ from cmu_graphics import *
 import random, copy
 from PIL import Image
 
+# did not use sources outside of CS Academy/the TAs/TP Resources Doc
+
 class Frame: 
     # draws basic setup of drawing app
     def __init__(self, app):
@@ -59,6 +61,7 @@ class Button:
         drawLabel(self.text, self.x+self.size/2, self.y+self.ysize/2, 
                   size=15, align='center')
 
+    # wrote based on TP Resources Doc
     def drawIcon(self, image):
         drawImage(image, self.x, self.y, align='left-top')
 
